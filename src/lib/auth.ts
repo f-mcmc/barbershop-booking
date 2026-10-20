@@ -1,23 +1,41 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 const COOKIE = "salon_admin";
 const MAX_AGE_SEC = 60 * 60 * 24 * 7;
 
+const DEMO_LOGIN = "admin";
+const DEMO_PASSWORD = "admin123";
+
+/**
+ * Cookie imzosi kaliti. SESSION_SECRET bo'lmasa, serverdagi maxfiy DATABASE_URL'dan
+ * olinadi — shunda Neon ulangan loyiha qo'shimcha sozlamasiz ishlaydi.
+ */
 function secret(): string {
   const s = process.env.SESSION_SECRET;
   if (s && s.length >= 16) return s;
+  const db = process.env.DATABASE_URL;
+  if (db) return createHash("sha256").update(`salon-session:${db}`).digest("hex");
   if (process.env.VERCEL_ENV === "production") {
-    throw new Error("SESSION_SECRET kamida 16 belgidan iborat bo'lishi kerak");
+    throw new Error("SESSION_SECRET yoki DATABASE_URL kerak");
   }
   return "dev-only-secret-change-me";
 }
 
+/** ADMIN_PASSWORD berilmagan bo'lsa, sayt demo rejimida: login ma'lumotlari ochiq ko'rsatiladi. */
+export function isDemoMode(): boolean {
+  return !process.env.ADMIN_PASSWORD;
+}
+
+export function demoCredentials(): { login: string; password: string } | null {
+  return isDemoMode() ? { login: DEMO_LOGIN, password: DEMO_PASSWORD } : null;
+}
+
 export function adminCredentials(): { login: string; password: string } {
   return {
-    login: process.env.ADMIN_LOGIN ?? "admin",
-    password: process.env.ADMIN_PASSWORD ?? "admin123",
+    login: process.env.ADMIN_LOGIN ?? DEMO_LOGIN,
+    password: process.env.ADMIN_PASSWORD ?? DEMO_PASSWORD,
   };
 }
 

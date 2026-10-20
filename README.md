@@ -28,8 +28,8 @@ npm run dev                  # http://localhost:3000
 | O'zgaruvchi | Vazifasi |
 |---|---|
 | `DATABASE_URL` | Postgres manzili (Neon, Supabase va h.k.) |
-| `ADMIN_LOGIN`, `ADMIN_PASSWORD` | Admin panelga kirish |
-| `SESSION_SECRET` | Kamida 16 belgili tasodifiy satr |
+| `ADMIN_LOGIN`, `ADMIN_PASSWORD` | Admin panelga kirish. `ADMIN_PASSWORD` bo'lmasa — demo rejim (`admin` / `admin123`, login sahifasida ko'rsatiladi) |
+| `SESSION_SECRET` | Kamida 16 belgili tasodifiy satr. Bo'lmasa `DATABASE_URL`dan hosil qilinadi |
 | `TELEGRAM_BOT_TOKEN` | @BotFather bergan token |
 | `TELEGRAM_CHAT_ID` | Xabar boradigan chat ID (botga /start yozib, @userinfobot orqali bilib olinadi) |
 

@@ -1,17 +1,23 @@
 import { redirect } from "next/navigation";
-import { isAdmin } from "@/lib/auth";
+import { demoCredentials, isAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (await isAdmin()) redirect("/admin");
   const { error } = await searchParams;
+  const demo = demoCredentials();
 
   return (
     <main className="grid min-h-screen place-items-center bg-ink px-4">
       <form action="/api/admin/login" method="post" className="w-full max-w-sm rounded-2xl bg-white p-8">
         <h1 className="font-display text-3xl font-semibold uppercase">Admin panel</h1>
         <p className="mt-1 text-sm text-ink-soft">Yozilishlarni boshqarish uchun kiring.</p>
+        {demo ? (
+          <p className="mt-4 rounded-xl bg-paper px-4 py-3 text-sm">
+            Demo: login <strong>{demo.login}</strong>, parol <strong>{demo.password}</strong>
+          </p>
+        ) : null}
         <label className="mt-6 grid gap-1.5 text-sm font-semibold">
           Login
           <input name="login" required autoComplete="username" className="rounded-xl border border-line px-4 py-3 text-base font-normal" />
