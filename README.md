@@ -4,6 +4,8 @@ Mijoz usta, xizmat, kun va bo'sh vaqtni tanlab yoziladi. Salon egasi admin panel
 
 Next.js 16 · TypeScript (strict) · PostgreSQL · Tailwind CSS v4
 
+**Demo:** https://murodulloh-barbershop.vercel.app · admin panel: `/admin` (demo: `admin` / `admin123`)
+
 ## Imkoniyatlar
 
 - 4 qadamli yozilish: usta → xizmat → kun va vaqt → ism va telefon
