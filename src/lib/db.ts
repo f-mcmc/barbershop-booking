@@ -73,13 +73,23 @@ function wrapLite(lite: Pick<PGlite, "query">): Queryable {
   };
 }
 
+/** Jadval yaratish va boshlang'ich ma'lumot. Bir vaqtda ishga tushgan serverlar ikki marta yozmasligi uchun qulf ostida. */
+async function migrate(tx: Queryable, runSchema: (sql: string) => Promise<void>): Promise<void> {
+  await runSchema(SCHEMA);
+  const rows = await tx.query<{ count: string }>("SELECT count(*)::text AS count FROM masters");
+  if (rows[0]?.count === "0") {
+    for (const stmt of SEED.split(";").map((x) => x.trim()).filter(Boolean)) {
+      await tx.query(stmt);
+    }
+  }
+}
+
 async function createDb(): Promise<Db> {
-  const url = process.env.DATABASE_URL;
-  let db: Db;
+  const url = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 
   if (url) {
     const pool = new Pool({ connectionString: url, max: 3, ssl: url.includes("localhost") ? false : { rejectUnauthorized: false } });
-    db = {
+    const db: Db = {
       ...wrapPg(pool),
       async transaction(fn) {
         const client = await pool.connect();
@@ -96,32 +106,37 @@ async function createDb(): Promise<Db> {
         }
       },
     };
-    await pool.query(SCHEMA);
-  } else {
-    const { PGlite } = await import("@electric-sql/pglite");
-    const lite = await PGlite.create(process.env.PGLITE_DIR ?? "memory://");
-    db = {
-      ...wrapLite(lite),
-      transaction: (fn) => lite.transaction((tx) => fn(wrapLite(tx))),
-    };
-    await lite.exec(SCHEMA);
+    await db.transaction(async (tx) => {
+      await tx.query("SELECT pg_advisory_xact_lock(7311)");
+      await migrate(tx, async (sql) => {
+        await tx.query(sql);
+      });
+    });
+    return db;
   }
 
-  const [{ count }] = (await db.query<{ count: string }>("SELECT count(*)::text AS count FROM masters")) as [
-    { count: string },
-  ];
-  if (count === "0") {
-    for (const stmt of SEED.split(";").map((s) => s.trim()).filter(Boolean)) {
-      await db.query(stmt);
-    }
-  }
+  const { PGlite } = await import("@electric-sql/pglite");
+  const lite = await PGlite.create(process.env.PGLITE_DIR ?? "memory://");
+  const db: Db = {
+    ...wrapLite(lite),
+    transaction: (fn) => lite.transaction((tx) => fn(wrapLite(tx))),
+  };
+  await migrate(db, async (sql) => {
+    await lite.exec(sql);
+  });
   return db;
 }
 
 const globalForDb = globalThis as unknown as { __salonDb?: Promise<Db> };
 
 export function getDb(): Promise<Db> {
-  if (!globalForDb.__salonDb) globalForDb.__salonDb = createDb();
+  if (!globalForDb.__salonDb) {
+    globalForDb.__salonDb = createDb().catch((err: unknown) => {
+      // Ulanish xatosi keshda qolib ketmasin — keyingi so'rov qayta urinadi
+      globalForDb.__salonDb = undefined;
+      throw err;
+    });
+  }
   return globalForDb.__salonDb;
 }
 
